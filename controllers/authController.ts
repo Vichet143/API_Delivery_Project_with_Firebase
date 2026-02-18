@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import admin from "../config/firebase";
 import userModels from "../models/userModels";
 
 export const register = async (req: Request, res: Response) => {
@@ -45,29 +46,25 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      message: "All field are required",
-    });
-  }
-
   try {
-    const { token, user } = await userModels.login(email);
+    const token = req.headers.authorization?.split("Bearer ")[1];
+    if (!token) return res.status(401).json({ message: "No token" });
 
-    return res.status(200).json({
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    const userData = await userModels.getUserByUid(decoded.uid);
+
+    res.json({
       success: true,
-      message: "Login successful",
-      token,
-      user,
+      user: {
+        uid: decoded.uid,
+        phone_number: decoded.phone_number,
+        email: decoded.email,
+        ...userData,
+      },
     });
-  } catch (error: any) {
-    return res.status(401).json({
-      success: false,
-      message: error.message,
-    });
+  } catch {
+    res.status(401).json({ message: "Invalid token" });
   }
 };
 
