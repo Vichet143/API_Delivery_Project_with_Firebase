@@ -1,5 +1,6 @@
 import admin from "../config/firebase";
 
+
 const register = async (
   email: string,
   password: string,
@@ -39,18 +40,36 @@ const register = async (
     id: userRecord.uid,
     photoURL,
     createdAt: new Date(),
-    token
   });
 
   return {userRecord, token};
 };
 
-const login = async (email: string) => {
-  const userRecord = await admin.auth().getUserByEmail(email);
+const getUserByUid = async (uid: string) => {
+  const doc = await admin.firestore().collection("users").doc(uid).get();
+  return doc.data();
+};
+
+export const login = async (phone_number: string) => {
+  const formattedPhone = phone_number.startsWith("+")
+    ? phone_number
+    : "+855" + phone_number.slice(1);
+
+  // Get user by phone
+  let userRecord;
+  try {
+    userRecord = await admin.auth().getUserByPhoneNumber(formattedPhone);
+  } catch (error) {
+    throw new Error("User not found");
+  }
+
+  // Create custom token for your backend
   const token = await admin.auth().createCustomToken(userRecord.uid);
+  console.log(token);
+  
+
   const db = admin.firestore();
   const userDoc = await db.collection("users").doc(userRecord.uid).get();
-
   const userData = userDoc.data();
 
   return {
@@ -59,7 +78,7 @@ const login = async (email: string) => {
       id: userRecord.uid,
       email: userRecord.email,
       username: userRecord.displayName,
-      phone_nemuber: userRecord.phoneNumber,
+      phone_number: userRecord.phoneNumber,
       photoURL: userRecord.photoURL,
       roles: userData?.roles || [],
     },
@@ -124,4 +143,4 @@ export const updateUser = async (
 };
 
 
-export default { register, login, getAllUsers, updateUser };
+export default { register, login, getAllUsers, updateUser ,getUserByUid};
