@@ -1,9 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import admin from "../config/firebase";
-
-interface AuthRequest extends Request {
-  user?: admin.auth.DecodedIdToken;
-}
+import { AuthRequest } from "./AuthRequest"; // use the shared interface
 
 const authMiddleware = async (
   req: AuthRequest,
@@ -18,10 +15,14 @@ const authMiddleware = async (
   }
 
   try {
+    console.log("Token preview:", token?.substring(0, 50));
+    console.log("Token length:", token?.length);
     const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
+    console.log("Decoded UID:", decodedToken.uid);
+    req.uid = decodedToken.uid;
     next();
-  } catch (error) {
+  } catch (error: any) {
+    console.log("Verify error:", error.code, error.message); 
     return res.status(401).json({ message: "Invalid token" });
   }
 };

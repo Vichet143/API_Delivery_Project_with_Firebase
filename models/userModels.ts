@@ -7,7 +7,7 @@ const register = async (
   fullname: string,
   phone_number: string,
   photoURL: string,
-  roles: string
+  roles: string,
 ) => {
   const formatPhoneNumber = (phone: string) => {
     if (phone.startsWith("+")) return phone;
@@ -42,7 +42,50 @@ const register = async (
     createdAt: new Date(),
   });
 
-  return {userRecord, token};
+  return { userRecord, token };
+};
+const registerTransporter = async (
+  email: string,
+  password: string,
+  fullname: string,
+  phone_number: string,
+  photoURL: string,
+  roles: string,
+) => {
+  const formatPhoneNumber = (phone: string) => {
+    if (phone.startsWith("+")) return phone;
+
+    // Cambodia default (+855)
+    if (phone.startsWith("0")) {
+      return "+855" + phone.slice(1);
+    }
+
+    return "+855" + phone;
+  };
+
+  const formattedPhone = formatPhoneNumber(phone_number);
+
+  const userRecord = await admin.auth().createUser({
+    email,
+    password,
+    displayName: fullname,
+    photoURL,
+    phoneNumber: formattedPhone,
+  });
+
+  const token = await admin.auth().createCustomToken(userRecord.uid);
+  const db = admin.firestore();
+  await db.collection("transporter").doc(userRecord.uid).set({
+    fullname,
+    email,
+    roles,
+    phone_number,
+    id: userRecord.uid,
+    photoURL,
+    createdAt: new Date(),
+  });
+
+  return { userRecord, token };
 };
 
 const getUserByUid = async (uid: string) => {
@@ -143,4 +186,4 @@ export const updateUser = async (
 };
 
 
-export default { register, login, getAllUsers, updateUser ,getUserByUid};
+export default { register, login, getAllUsers, updateUser ,getUserByUid, registerTransporter};
