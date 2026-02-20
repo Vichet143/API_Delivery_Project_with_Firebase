@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import authUser from "./routes/authRoutes";
+import deliveries from "./routes/DeliveryRoutes"
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
 app.use("/auth", authUser);
+app.use("/deliveries", deliveries)
 
 const port = process.env.PORT || 3000;
 

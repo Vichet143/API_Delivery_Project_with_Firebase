@@ -45,6 +45,49 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
+export const registerTrasporter = async (req: Request, res: Response) => {
+  const { fullname, email, password, phone_number } = req.body;
+
+  if (!fullname || !email || !password || !phone_number) {
+    return res.status(400).json({
+      success: false,
+      message: "All fields are required",
+    });
+  }
+
+  try {
+    const photoURL = "http://www.example.com/12345678/photo.png";
+    const roles = "transporter";
+    const { userRecord, token } = await userModels.registerTransporter(
+      email,
+      password,
+      fullname,
+      phone_number,
+      photoURL,
+      roles,
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Transporter registered successfully",
+      user: {
+        id: userRecord.uid,
+        fullname,
+        phone_number,
+        email,
+        photoURL,
+        roles,
+        token,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export const login = async (req: Request, res: Response) => {
   try {
     const token = req.headers.authorization?.split("Bearer ")[1];

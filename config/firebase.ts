@@ -4,7 +4,6 @@ import path from "path";
 
 dotenv.config();
 
-
 const serviceAccount = require(
   path.join(
     __dirname,
@@ -12,9 +11,17 @@ const serviceAccount = require(
   ),
 );
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// if (!admin.apps.length) {
+//   admin.initializeApp({
+//     credential: admin.credential.cert(serviceAccount),
+//   });
+// }
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+  });
+}
 
-
+export const db = admin.firestore();
+export const auth = admin.auth();
 export default admin;
