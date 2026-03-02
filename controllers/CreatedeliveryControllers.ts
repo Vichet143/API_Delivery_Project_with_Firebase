@@ -4,8 +4,11 @@ import { AuthRequest } from "../middleware/AuthRequest";
 import * as admin from "firebase-admin";
 import {
   Delivery,
+  PackageSize,
+  PACKAGE_SIZE_PRICES,
   VALID_STATUSES,
   TRANSPORTER_ALLOWED_STATUSES,
+  VALID_PAYMENT_STATUSES,
 } from "../models/Createdelivery";
 
 function normalizeDelivery(
@@ -29,7 +32,10 @@ function normalizeDelivery(
     packageName: data.packageName,
     packageNote: data.packageNote ?? "",
     packageSize: data.packageSize,
+    price: data.price ?? 0,
     status: data.status,
+    paymentStatus: data.paymentStatus ?? "unpaid",
+    paymentAt: data.paymentAt ?? null,
     transporterId: data.transporterId,
     acceptedAt: data.acceptedAt,
     createdAt: data.createdAt,
@@ -67,16 +73,24 @@ export const createDelivery = async (
     return;
   }
 
+  // ── ADD THESE LINES ──
+  if (!packageSize || !(packageSize in PACKAGE_SIZE_PRICES)) {
+    res.status(400).json({
+      message: `Invalid packageSize. Must be one of: ${Object.keys(PACKAGE_SIZE_PRICES).join(", ")}`,
+    });
+    return;
+  }
+
+  const price = PACKAGE_SIZE_PRICES[packageSize as PackageSize];
+
   try {
     const deliveryRef = db.collection("deliveries").doc();
 
     const delivery: Delivery = {
       delivery_id: deliveryRef.id,
       userId: resolveUid(req),
-
       recipientName,
       recipientPhone,
-
       pickup: {
         address: pickup.address,
         latitude: pickup.latitude,
@@ -87,13 +101,13 @@ export const createDelivery = async (
         latitude: dropoff.latitude,
         longitude: dropoff.longitude,
       },
-
       packageName,
       packageNote: packageNote ?? "",
       packageSize,
-
+      price,
+      paymentStatus: "unpaid",
+      paymentAt: null,
       status: "pending",
-
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -109,7 +123,6 @@ export const createDelivery = async (
     res.status(500).json({ message: err.message });
   }
 };
-
 
 export const getDeliveryHistory = async (
   req: AuthRequest,
@@ -140,7 +153,6 @@ export const getDeliveryHistory = async (
       }
     }
 
-
     deliveries.sort((a: any, b: any) => {
       const aTime = a.createdAt?.toMillis?.() ?? 0;
       const bTime = b.createdAt?.toMillis?.() ?? 0;
@@ -152,7 +164,74 @@ export const getDeliveryHistory = async (
     res.status(500).json({ message: err.message });
   }
 };
+export const updatePaymentStatus = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const { delivery_id }: any = req.params;
+  const { paymentStatus } = req.body;
+  const uid = resolveUid(req);
 
+  if (!VALID_PAYMENT_STATUSES.includes(paymentStatus)) {
+    res.status(400).json({
+      message: `Invalid paymentStatus. Must be one of: ${VALID_PAYMENT_STATUSES.join(", ")}`,
+    });
+    return;
+  }
+
+  try {
+    const docRef = db.collection("deliveries").doc(delivery_id);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      res.status(404).json({ message: "Delivery not found" });
+      return;
+    }
+
+    const delivery = normalizeDelivery(doc.id, doc.data()!);
+
+    if (delivery.userId !== uid) {
+      res.status(403).json({ message: "Forbidden" });
+      return;
+    }
+
+    // Refund only allowed if delivery is cancelled
+    if (paymentStatus === "refunded" && delivery.status !== "cancelled") {
+      res.status(409).json({
+        message: "Refund only allowed on cancelled deliveries",
+      });
+      return;
+    }
+
+    // Cannot un-pay a paid delivery (no reverting to unpaid)
+    if (paymentStatus === "unpaid" && delivery.paymentStatus !== "unpaid") {
+      res.status(409).json({
+        message: "Cannot revert payment status to unpaid",
+      });
+      return;
+    }
+
+    await docRef.update({
+      paymentStatus,
+      // Record timestamp only when marking as paid
+      ...(paymentStatus === "paid" && {
+        paymentAt: admin.firestore.FieldValue.serverTimestamp(),
+      }),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.status(200).json({
+      message: "Payment status updated",
+      paymentStatus,
+      // Echo it back in the response too
+      ...(paymentStatus === "paid" && { paymentAt: new Date().toISOString() }),
+    });
+
+    res.status(200).json({ message: "Payment status updated", paymentStatus });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
 export const getDeliveryById = async (
   req: AuthRequest,
   res: Response,
