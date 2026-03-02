@@ -10,21 +10,33 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "��#\u0000 \u0000A\u0000P\u0000I\u0000_\u0000D\u0000e\u0000l\u0000i\u0000v\u0000e\u0000r\u0000y\u0000_\u0000P\u0000r\u0000o\u0000j\u0000e\u0000c\u0000t\u0000_\u0000F\u0000i\u0000r\u0000e\u0000b\u0000a\u0000s\u0000e\u0000\r\u0000 \u0000#\u0000 \u0000A\u0000P\u0000I\u0000_\u0000D\u0000e\u0000l\u0000i\u0000v\u0000e\u0000r\u0000y\u0000_\u0000P\u0000r\u0000o\u0000j\u0000e\u0000c\u0000t\u0000_\u0000w\u0000i\u0000t\u0000h\u0000_\u0000F\u0000i\u0000r\u0000e\u0000b\u0000a\u0000s\u0000e\u0000\r\u0000 \u0000# API_Delivery_Project_with_Firebase # API_Delivery_Project_with_Firebase",
   "dependencies": {
+    "bakong-khqr": "^1.0.20",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "firebase-admin": "^13.6.0"
+    "firebase-admin": "^13.6.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "@types/bakong-khqr": "^1.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.2.0",
+    "@types/qrcode": "^1.5.6",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vichet143/API_Delivery_Project_with_Firebase.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Vichet143/API_Delivery_Project_with_Firebase/issues"
+  },
+  "homepage": "https://github.com/Vichet143/API_Delivery_Project_with_Firebase#readme"
 }

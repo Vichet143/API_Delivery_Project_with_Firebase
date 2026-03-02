@@ -11,27 +11,35 @@ export type DeliveryStatus =
   | "delivered"
   | "cancelled";
 
+export type PackageSize = "small" | "medium" | "large";
+
+export const PACKAGE_SIZE_PRICES: Record<PackageSize, number> = {
+  small: 0.25,
+  medium: 0.26,
+  large: 0.27,
+};
+
+export type PaymentStatus = "unpaid" | "paid" | "refunded";
+
 export interface Delivery {
   delivery_id: string;
   userId: string;
 
-  // Recipient
   recipientName: string;
   recipientPhone: string;
 
-  // Locations
   pickup: Location;
   dropoff: Location;
 
-  // Package
   packageName: string;
   packageNote: string;
-  packageSize: string;
+  packageSize: PackageSize;
+  price: number;
 
-  // Status
   status: DeliveryStatus;
+  paymentStatus: PaymentStatus;
+  paymentAt?: FirebaseFirestore.FieldValue | null;
 
-  // Transporter
   transporterId?: string;
   acceptedAt?: FirebaseFirestore.FieldValue;
 
@@ -47,9 +55,15 @@ export const VALID_STATUSES: DeliveryStatus[] = [
   "cancelled",
 ];
 
-// Statuses only a transporter can set (cannot cancel or revert to pending)
 export const TRANSPORTER_ALLOWED_STATUSES: DeliveryStatus[] = [
   "picked_up",
   "in_transit",
   "delivered",
+];
+
+export const VALID_PAYMENT_STATUSES: PaymentStatus[] = [
+  // ← new
+  "unpaid",
+  "paid",
+  "refunded",
 ];

@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 
 import authUser from "./routes/authRoutes";
 import deliveries from "./routes/DeliveryRoutes"
+import payment from "./routes/PaymentRoute"
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(cors());
 
 app.use("/auth", authUser);
 app.use("/deliveries", deliveries)
+app.use("/payment", payment)
 
 const port = process.env.PORT || 3000;
 
