@@ -1,6 +1,5 @@
 import admin from "../config/firebase";
 
-
 const register = async (
   email: string,
   password: string,
@@ -89,8 +88,18 @@ const registerTransporter = async (
 };
 
 const getUserByUid = async (uid: string) => {
-  const doc = await admin.firestore().collection("users").doc(uid).get();
-  return doc.data();
+  const db = admin.firestore();
+
+  // Check both users and transporter collections
+  const userDoc = await db.collection("users").doc(uid).get();
+  let userData = userDoc.data();
+
+  if (!userData) {
+    const transporterDoc = await db.collection("transporter").doc(uid).get();
+    userData = transporterDoc.data();
+  }
+
+  return userData;
 };
 
 export const login = async (phone_number: string) => {
@@ -109,11 +118,20 @@ export const login = async (phone_number: string) => {
   // Create custom token for your backend
   const token = await admin.auth().createCustomToken(userRecord.uid);
   console.log(token);
-  
 
   const db = admin.firestore();
+
+  // Check both users and transporter collections
   const userDoc = await db.collection("users").doc(userRecord.uid).get();
-  const userData = userDoc.data();
+  let userData = userDoc.data();
+
+  if (!userData) {
+    const transporterDoc = await db
+      .collection("transporter")
+      .doc(userRecord.uid)
+      .get();
+    userData = transporterDoc.data();
+  }
 
   return {
     token,
@@ -131,13 +149,34 @@ export const login = async (phone_number: string) => {
 // Get all users
 const getAllUsers = async () => {
   const listUsersResult = await admin.auth().listUsers(1000);
-  return listUsersResult.users.map((user) => ({
-    id: user.uid,
-    email: user.email,
-    username: user.displayName,
-    phone_number: user.phoneNumber,
-    photoURL: user.photoURL,
-  }));
+  const db = admin.firestore();
+
+  const usersWithRoles = await Promise.all(
+    listUsersResult.users.map(async (user) => {
+      // Check both users and transporter collections
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      let userData = userDoc.data();
+
+      if (!userData) {
+        const transporterDoc = await db
+          .collection("transporter")
+          .doc(user.uid)
+          .get();
+        userData = transporterDoc.data();
+      }
+
+      return {
+        id: user.uid,
+        email: user.email,
+        username: user.displayName,
+        phone_number: user.phoneNumber,
+        photoURL: user.photoURL,
+        role: userData?.roles,
+      };
+    }),
+  );
+
+  return usersWithRoles;
 };
 
 export const updateUser = async (
@@ -151,7 +190,6 @@ export const updateUser = async (
   const formatPhoneNumber = (phone: string) => {
     if (phone.startsWith("+")) return phone;
 
-    
     if (phone.startsWith("0")) {
       return "+855" + phone.slice(1);
     }
@@ -185,5 +223,11 @@ export const updateUser = async (
   return userRecord;
 };
 
-
-export default { register, login, getAllUsers, updateUser ,getUserByUid, registerTransporter};
+export default {
+  register,
+  login,
+  getAllUsers,
+  updateUser,
+  getUserByUid,
+  registerTransporter,
+};
