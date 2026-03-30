@@ -1,4 +1,8 @@
 import admin from "../config/firebase";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
+const JWT_EXPIRES_IN = "7d";
 
 const register = async (
   email: string,
@@ -29,7 +33,9 @@ const register = async (
     phoneNumber: formattedPhone,
   });
 
-  const token = await admin.auth().createCustomToken(userRecord.uid);
+  const token = jwt.sign({ uid: userRecord.uid, roles }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
   const db = admin.firestore();
   await db.collection("users").doc(userRecord.uid).set({
     fullname,
@@ -72,7 +78,9 @@ const registerTransporter = async (
     phoneNumber: formattedPhone,
   });
 
-  const token = await admin.auth().createCustomToken(userRecord.uid);
+  const token = jwt.sign({ uid: userRecord.uid, roles }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
   const db = admin.firestore();
   await db.collection("transporter").doc(userRecord.uid).set({
     fullname,
@@ -102,7 +110,7 @@ const getUserByUid = async (uid: string) => {
   return userData;
 };
 
-export const login = async (phone_number: string) => {
+export const login = async (phone_number: string, roles?: string) => {
   const formattedPhone = phone_number.startsWith("+")
     ? phone_number
     : "+855" + phone_number.slice(1);
@@ -114,10 +122,6 @@ export const login = async (phone_number: string) => {
   } catch (error) {
     throw new Error("User not found");
   }
-
-  // Create custom token for your backend
-  const token = await admin.auth().createCustomToken(userRecord.uid);
-  console.log(token);
 
   const db = admin.firestore();
 
@@ -132,6 +136,15 @@ export const login = async (phone_number: string) => {
       .get();
     userData = transporterDoc.data();
   }
+
+  if (!userData) {
+    throw new Error("Profile not found for this account");
+  }
+
+  const tokenRole = roles || userData.roles || "user";
+  const token = jwt.sign({ uid: userRecord.uid, roles: tokenRole }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  });
 
   return {
     token,
@@ -223,6 +236,36 @@ export const updateUser = async (
   return userRecord;
 };
 
+export const getallTransporter = async ()=>{
+  const listUsersResult = await admin.auth().listUsers(1000);
+  const db = admin.firestore();
+
+  const transporterWithRoles = await Promise.all(
+    listUsersResult.users.map(async (user) => {
+      // Check transporter collection
+      const transporterDoc = await db
+        .collection("transporter")
+        .doc(user.uid)
+        .get();
+      const transporterData = transporterDoc.data();
+
+      if (transporterData) {
+        return {
+          id: user.uid,
+          email: user.email,
+          username: user.displayName,
+          phone_number: user.phoneNumber,
+          photoURL: user.photoURL,
+          role: transporterData.roles,
+        };
+      }
+    }),
+  );
+
+  // Filter out non-transporters
+  return transporterWithRoles.filter((transporter) => transporter !== undefined);
+}
+
 export default {
   register,
   login,
@@ -230,4 +273,5 @@ export default {
   updateUser,
   getUserByUid,
   registerTransporter,
+  getallTransporter
 };
