@@ -394,8 +394,10 @@ export const acceptDelivery = async (
       return;
     }
 
+    // FIX: Add status: "accepted" here so it disappears from search results
     await docRef.update({
       transporterId: uid,
+      status: "accepted", 
       acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -451,6 +453,58 @@ export const updateStatusByTransporter = async (
     });
 
     res.status(200).json({ message: "Status updated", status });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── GET /deliveries/transporter/active ── */
+// It filters for jobs assigned to the current driver that are currently in progress.
+export const getActiveTransporterJobs = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const uid = resolveUid(req);
+
+  try {
+    const snapshot = await db
+      .collection("deliveries")
+      .where("transporterId", "==", uid)
+      .where("status", "in", ["accepted", "picked_up", "in_transit"]) // Logic from action plan
+      .orderBy("updatedAt", "desc")
+      .get();
+
+    const deliveries = snapshot.docs.map((doc) =>
+      normalizeDelivery(doc.id, doc.data())
+    );
+
+    res.status(200).json({ deliveries });
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ── GET /deliveries/transporter/history ── */
+// Similar to getActiveTransporterJobs but shows all past jobs (accepted, completed, cancelled) for the transporter.
+export const getTransporterHistory = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const uid = resolveUid(req);
+
+  try {
+    const snapshot = await db
+      .collection("deliveries")
+      .where("transporterId", "==", uid)
+      .where("status", "==", "delivered") // Only fully finished jobs
+      .orderBy("updatedAt", "desc")
+      .get();
+
+    const deliveries = snapshot.docs.map((doc) =>
+      normalizeDelivery(doc.id, doc.data())
+    );
+
+    res.status(200).json({ deliveries });
   } catch (err: any) {
     res.status(500).json({ message: err.message });
   }
