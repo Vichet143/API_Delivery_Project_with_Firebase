@@ -4,8 +4,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import authUser from "./routes/authRoutes";
-import deliveries from "./routes/DeliveryRoutes"
-import payment from "./routes/PaymentRoute"
+import deliveries from "./routes/DeliveryRoutes";
+import payment from "./routes/PaymentRoute";
+import chat from "./routes/ChatRoute";
 
 dotenv.config();
 
@@ -17,8 +18,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
 app.use("/auth", authUser);
-app.use("/deliveries", deliveries)
-app.use("/payment", payment)
+app.use("/deliveries", deliveries);
+app.use("/payment", payment);
+app.use("/chat", chat);
 
 const port = process.env.PORT || 3000;
 

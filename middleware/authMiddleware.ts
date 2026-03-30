@@ -22,7 +22,7 @@ const authMiddleware = async (
     req.uid = decodedToken.uid;
     next();
   } catch (error: any) {
-    console.log("Verify error:", error.code, error.message); 
+    console.log("Verify error:", error.code, error.message);
     return res.status(401).json({ message: "Invalid token" });
   }
 };

@@ -368,6 +368,8 @@ export const acceptDelivery = async (
 ): Promise<void> => {
   const { delivery_id }: any = req.params;
   const uid = resolveUid(req);
+  console.log(uid);
+  
 
   try {
     const docRef = db.collection("deliveries").doc(delivery_id);
