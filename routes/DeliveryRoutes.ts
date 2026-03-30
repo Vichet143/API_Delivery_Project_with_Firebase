@@ -18,11 +18,11 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/create", authMiddleware, createDelivery);
-router.get("/history", authMiddleware, getDeliveryHistory);
-router.get("/:delivery_id", authMiddleware, getDeliveryById);
-router.patch("/:delivery_id/status", authMiddleware, updateDeliveryStatus);
-router.delete("/:delivery_id", authMiddleware, cancelDelivery);
+router.post("/create", createDelivery);
+router.get("/history", getDeliveryHistory);
+router.get("/:delivery_id", getDeliveryById);
+router.patch("/:delivery_id/status", updateDeliveryStatus);
+router.delete("/:delivery_id", cancelDelivery);
 
 // transporter router
 router.get("/transporter/available", getAvailableDeliveries);         

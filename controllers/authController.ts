@@ -100,7 +100,7 @@ export const login = async (req: Request, res: Response) => {
     res.json({
       success: true,
       user: {
-        uid: decoded.uid,
+        id: decoded.uid,
         phone_number: decoded.phone_number,
         email: decoded.email,
         fullname: userData?.fullname || decoded.name,
@@ -161,5 +161,53 @@ export const updateUser = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     return res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+
+export const getuserByUid = async (req: Request, res: Response) => {
+  const uid: any = req.params.uid;
+
+  if (!uid) {
+    return res
+      .status(400)
+      .json({ success: false, message: "User UID is required" });
+  }
+
+  try {
+    const userData = await userModels.getUserByUid(uid);
+
+    if (!userData) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: uid,
+        fullname: userData.fullname,
+        email: userData.email,
+        phone_number: userData.phone_number,
+        photoURL: userData.photoURL,
+        roles: userData.roles,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getallTransporters = async (req: Request, res: Response) => {
+  try {
+    const transporters = await userModels.getallTransporter();           
+    return res.status(200).json({
+      success: true,
+      transporters,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

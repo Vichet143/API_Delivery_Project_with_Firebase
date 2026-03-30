@@ -111,6 +111,8 @@ export const createDelivery = async (
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
+    console.log(delivery);
+    
 
     await deliveryRef.set(delivery);
 
