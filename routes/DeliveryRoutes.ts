@@ -9,6 +9,8 @@ import {
   getAvailableDeliveries,
   acceptDelivery,
   updateStatusByTransporter,
+  getTransporterHistory,
+  getActiveTransporterJobs
 } from "../controllers/CreatedeliveryControllers";
 
 const router = Router();
@@ -26,5 +28,8 @@ router.delete("/:delivery_id", authMiddleware, cancelDelivery);
 router.get("/transporter/available", getAvailableDeliveries);         
 router.post("/:delivery_id/accept", acceptDelivery);        
 router.patch("/:delivery_id/transporter-status", updateStatusByTransporter); 
+router.get("/transporter/active", getActiveTransporterJobs);
+router.get("/transporter/history", getTransporterHistory);
 
 export default router;
+  
