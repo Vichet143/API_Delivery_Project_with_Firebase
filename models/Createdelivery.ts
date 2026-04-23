@@ -41,6 +41,7 @@ export interface Delivery {
   paymentAt?: FirebaseFirestore.FieldValue | null;
 
   transporterId?: string;
+  transporterName?: string;
   acceptedAt?: FirebaseFirestore.FieldValue;
 
   createdAt: FirebaseFirestore.FieldValue;

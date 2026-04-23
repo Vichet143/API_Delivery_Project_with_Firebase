@@ -37,6 +37,7 @@ function normalizeDelivery(
     paymentStatus: data.paymentStatus ?? "unpaid",
     paymentAt: data.paymentAt ?? null,
     transporterId: data.transporterId,
+    transporterName: data.transporterName,
     acceptedAt: data.acceptedAt,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
@@ -250,6 +251,18 @@ export const getDeliveryById = async (
     }
 
     const delivery = normalizeDelivery(doc.id, doc.data()!);
+
+    if (delivery.transporterId) {
+      // console.log("🔍 Looking for Transporter ID:", delivery.transporterId);
+
+      const transporterDoc = await db.collection('transporter').doc(delivery.transporterId).get();
+
+      // console.log("📄 Document exists?:", transporterDoc.exists);
+      // console.log("📊 Raw Data from DB:", transporterDoc.data());
+
+      const transporterData = transporterDoc.data();
+      delivery.transporterName = transporterData?.fullname || "Courier";
+    }
 
     // Allow both the owner and the assigned transporter to view
     if (delivery.userId !== uid && delivery.transporterId !== uid) {
