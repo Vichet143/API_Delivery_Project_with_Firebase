@@ -107,6 +107,11 @@ const getUserByUid = async (uid: string) => {
     userData = transporterDoc.data();
   }
 
+  if (userData && !userData.photoURL) {
+    const authUser = await admin.auth().getUser(uid);
+    userData.photoURL = authUser.photoURL || "";
+  }
+
   return userData;
 };
 
@@ -142,9 +147,13 @@ export const login = async (phone_number: string, roles?: string) => {
   }
 
   const tokenRole = roles || userData.roles || "user";
-  const token = jwt.sign({ uid: userRecord.uid, roles: tokenRole }, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-  });
+  const token = jwt.sign(
+    { uid: userRecord.uid, roles: tokenRole },
+    JWT_SECRET,
+    {
+      expiresIn: JWT_EXPIRES_IN,
+    },
+  );
 
   return {
     token,
@@ -183,7 +192,7 @@ const getAllUsers = async () => {
         email: user.email,
         username: user.displayName,
         phone_number: user.phoneNumber,
-        photoURL: user.photoURL,
+        photoURL: userData?.photoURL || user.photoURL || "",
         role: userData?.roles,
       };
     }),
@@ -199,20 +208,33 @@ export const updateUser = async (
   password: string,
   photoURL: string,
   phone_number: string,
+  roles?: string,
 ) => {
   const formatPhoneNumber = (phone: string) => {
     if (phone.startsWith("+")) return phone;
-
-    if (phone.startsWith("0")) {
-      return "+855" + phone.slice(1);
-    }
-
+    if (phone.startsWith("0")) return "+855" + phone.slice(1);
     return "+855" + phone;
   };
 
-  const formattedPhone = formatPhoneNumber(phone_number);
+  const formattedPhone = phone_number
+    ? formatPhoneNumber(phone_number)
+    : undefined;
+  const db = admin.firestore();
 
-  // Prepare data for Firebase Auth
+  let targetCollection = "users";
+  if (roles === "transporter") {
+    targetCollection = "transporter";
+  } else if (typeof roles === "undefined") {
+    const [usersDoc, transporterDoc] = await Promise.all([
+      db.collection("users").doc(uid).get(),
+      db.collection("transporter").doc(uid).get(),
+    ]);
+    if (usersDoc.exists) targetCollection = "users";
+    else if (transporterDoc.exists) targetCollection = "transporter";
+    else targetCollection = "users";
+  } else {
+    targetCollection = "users";
+  }
   const updateData: any = {};
   if (email) updateData.email = email;
   if (password) updateData.password = password;
@@ -222,21 +244,32 @@ export const updateUser = async (
 
   const userRecord = await admin.auth().updateUser(uid, updateData);
 
-  // Update Firestore user document
-  const db = admin.firestore();
+  if (roles) {
+    try {
+      await admin.auth().setCustomUserClaims(uid, { role: roles });
+    } catch (err) {
+      console.error("setCustomUserClaims failed for", uid, err);
+    }
+  }
+
   const firestoreData: any = {};
   if (fullname) firestoreData.fullname = fullname;
   if (email) firestoreData.email = email;
   if (photoURL) firestoreData.photoURL = photoURL;
-  if (phone_number) firestoreData.phone_number = phone_number;
+  if (formattedPhone) firestoreData.phone_number = formattedPhone;
+  if (roles) firestoreData.roles = roles;
+  firestoreData.uid = uid;
   firestoreData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
 
-  await db.collection("users").doc(uid).update(firestoreData);
+  await db
+    .collection(targetCollection)
+    .doc(uid)
+    .set(firestoreData, { merge: true });
 
   return userRecord;
 };
 
-export const getallTransporter = async ()=>{
+export const getallTransporter = async () => {
   const listUsersResult = await admin.auth().listUsers(1000);
   const db = admin.firestore();
 
@@ -255,7 +288,7 @@ export const getallTransporter = async ()=>{
           email: user.email,
           username: user.displayName,
           phone_number: user.phoneNumber,
-          photoURL: user.photoURL,
+          photoURL: transporterData.photoURL || user.photoURL || "",
           role: transporterData.roles,
         };
       }
@@ -263,8 +296,10 @@ export const getallTransporter = async ()=>{
   );
 
   // Filter out non-transporters
-  return transporterWithRoles.filter((transporter) => transporter !== undefined);
-}
+  return transporterWithRoles.filter(
+    (transporter) => transporter !== undefined,
+  );
+};
 
 export default {
   register,
@@ -273,5 +308,5 @@ export default {
   updateUser,
   getUserByUid,
   registerTransporter,
-  getallTransporter
+  getallTransporter,
 };
