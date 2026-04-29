@@ -33,6 +33,7 @@ export interface Delivery {
 
   packageName: string;
   packageNote: string;
+  photoURL?: string;
   packageSize: PackageSize;
   price: number;
 

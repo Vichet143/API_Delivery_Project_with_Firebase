@@ -17,7 +17,7 @@ router.post("/registertransporter", registerTrasporter);
 router.post("/login", login);
 router.get("/getalluser", getAllUsers);
 router.get("/getalltransporter", getallTransporters);
-router.get("/getuser/:uid", getuserByUid);
 router.put("/updateprofile/:id", updateUser);
+router.get("/getuser/:uid", getuserByUid);
 
 export default router;
