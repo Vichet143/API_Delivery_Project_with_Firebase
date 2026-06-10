@@ -96,19 +96,21 @@ export const login = async (req: Request, res: Response) => {
     const decoded = await admin.auth().verifyIdToken(token);
 
     const userData = await userModels.getUserByUid(decoded.uid);
+    console.log("Found User Data:", userData);
 
     res.json({
       success: true,
       user: {
         id: decoded.uid,
-        phone_number: decoded.phone_number,
-        email: decoded.email,
-        fullname: userData?.fullname || decoded.name,
+        phone_number: decoded.phone_number || "",
+        email: decoded.email || "",
+        fullname: userData?.fullname || decoded.name || "No name",
         role: userData?.roles || "user",
-        photoURL: userData?.photoURL || decoded.picture,
+        photoURL: userData?.photoURL || decoded.picture || "",
       },
     });
-  } catch {
+  } catch (error: any) {
+    console.error("Login Error:", error);
     res.status(401).json({ message: "Invalid token" });
   }
 };

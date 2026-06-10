@@ -40,7 +40,10 @@ async function chat(input) {
         user_id: input.user_id,
         transporter_id: input.transporter_id,
         messages: input.messages,
+        sender_type: input.sender_type,
         date: firebase_1.default.firestore.FieldValue.serverTimestamp(),
+        user: input.user || undefined,
+        transporter: input.transporter || undefined,
     };
     const docChat = await firebase_1.db.collection("chat").add(createchat);
     return {

@@ -3,7 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUser = exports.getTransporterById = exports.getUserById = exports.getAllUsers = exports.login = exports.registerTrasporter = exports.register = void 0;
+exports.getallTransporters = exports.getuserByUid = exports.updateUser = exports.getAllUsers = exports.login = exports.registerTrasporter = exports.register = void 0;
+const firebase_1 = __importDefault(require("../config/firebase"));
 const userModels_1 = __importDefault(require("../models/userModels"));
 const register = async (req, res) => {
     const { fullname, email, password, phone_number } = req.body;
@@ -75,39 +76,27 @@ const registerTrasporter = async (req, res) => {
 exports.registerTrasporter = registerTrasporter;
 const login = async (req, res) => {
     try {
-        const { phone_number, roles } = req.body;
-        if (!phone_number) {
-            return res.status(400).json({
-                success: false,
-                message: "phone_number is required",
-            });
-        }
-        if (roles && !["user", "transporter"].includes(roles)) {
-            return res.status(400).json({
-                success: false,
-                message: "roles must be either 'user' or 'transporter'",
-            });
-        }
-        const loginResult = await userModels_1.default.login(phone_number, roles);
+        const token = req.headers.authorization?.split("Bearer ")[1];
+        if (!token)
+            return res.status(401).json({ message: "No token" });
+        const decoded = await firebase_1.default.auth().verifyIdToken(token);
+        const userData = await userModels_1.default.getUserByUid(decoded.uid);
+        console.log("Found User Data:", userData);
         res.json({
             success: true,
-            message: "Login success",
-            token: loginResult.token,
-            user: loginResult.user,
+            user: {
+                id: decoded.uid,
+                phone_number: decoded.phone_number || "",
+                email: decoded.email || "",
+                fullname: userData?.fullname || decoded.name || "No name",
+                role: userData?.roles || "user",
+                photoURL: userData?.photoURL || decoded.picture || "",
+            },
         });
     }
     catch (error) {
-        if (error.message === "User not found" ||
-            error.message === "Profile not found for this account") {
-            return res.status(404).json({
-                success: false,
-                message: error.message,
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: error.message || "Failed to login",
-        });
+        console.error("Login Error:", error);
+        res.status(401).json({ message: "Invalid token" });
     }
 };
 exports.login = login;
@@ -127,66 +116,6 @@ const getAllUsers = async (req, res) => {
     }
 };
 exports.getAllUsers = getAllUsers;
-const getUserById = async (req, res) => {
-    const rawId = req.params.id;
-    const id = Array.isArray(rawId) ? rawId[0] : rawId;
-    if (!id) {
-        return res.status(400).json({
-            success: false,
-            message: "User ID is required",
-        });
-    }
-    try {
-        const user = await userModels_1.default.getUserById(id);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
-        }
-        return res.status(200).json({
-            success: true,
-            user,
-        });
-    }
-    catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-exports.getUserById = getUserById;
-const getTransporterById = async (req, res) => {
-    const rawId = req.params.id;
-    const id = Array.isArray(rawId) ? rawId[0] : rawId;
-    if (!id) {
-        return res.status(400).json({
-            success: false,
-            message: "Transporter ID is required",
-        });
-    }
-    try {
-        const transporter = await userModels_1.default.getTransporterById(id);
-        if (!transporter) {
-            return res.status(404).json({
-                success: false,
-                message: "Transporter not found",
-            });
-        }
-        return res.status(200).json({
-            success: true,
-            transporter,
-        });
-    }
-    catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
-exports.getTransporterById = getTransporterById;
 const updateUser = async (req, res) => {
     const id = req.params.id;
     const { fullname, email, password, photoURL, phone_number } = req.body;
@@ -214,3 +143,48 @@ const updateUser = async (req, res) => {
     }
 };
 exports.updateUser = updateUser;
+const getuserByUid = async (req, res) => {
+    const uid = req.params.uid;
+    if (!uid) {
+        return res
+            .status(400)
+            .json({ success: false, message: "User UID is required" });
+    }
+    try {
+        const userData = await userModels_1.default.getUserByUid(uid);
+        if (!userData) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        return res.status(200).json({
+            success: true,
+            user: {
+                id: uid,
+                fullname: userData.fullname,
+                email: userData.email,
+                phone_number: userData.phone_number,
+                photoURL: userData.photoURL,
+                roles: userData.roles,
+            },
+        });
+    }
+    catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+exports.getuserByUid = getuserByUid;
+const getallTransporters = async (req, res) => {
+    try {
+        const transporters = await userModels_1.default.getallTransporter();
+        return res.status(200).json({
+            success: true,
+            transporters,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+exports.getallTransporters = getallTransporters;
