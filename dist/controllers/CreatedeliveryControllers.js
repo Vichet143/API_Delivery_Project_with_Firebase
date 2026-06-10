@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateStatusByTransporter = exports.acceptDelivery = exports.getAvailableDeliveries = exports.cancelDelivery = exports.updateDeliveryStatus = exports.getDeliveryById = exports.updatePaymentStatus = exports.getDeliveryHistory = exports.createDelivery = void 0;
+exports.getTransporterHistory = exports.getActiveTransporterJobs = exports.updateStatusByTransporter = exports.acceptDelivery = exports.getAvailableDeliveries = exports.cancelDelivery = exports.updateDeliveryStatus = exports.getDeliveryById = exports.updatePaymentStatus = exports.getDeliveryHistory = exports.createDelivery = void 0;
 const firebase_1 = require("../config/firebase");
 const admin = __importStar(require("firebase-admin"));
 const Createdelivery_1 = require("../models/Createdelivery");
@@ -60,6 +60,7 @@ function normalizeDelivery(docId, data) {
         paymentStatus: data.paymentStatus ?? "unpaid",
         paymentAt: data.paymentAt ?? null,
         transporterId: data.transporterId,
+        transporterName: data.transporterName,
         acceptedAt: data.acceptedAt,
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
@@ -114,6 +115,7 @@ const createDelivery = async (req, res) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
+        console.log(delivery);
         await deliveryRef.set(delivery);
         res.status(201).json({
             message: "Delivery created successfully",
@@ -226,6 +228,14 @@ const getDeliveryById = async (req, res) => {
             return;
         }
         const delivery = normalizeDelivery(doc.id, doc.data());
+        if (delivery.transporterId) {
+            // console.log("🔍 Looking for Transporter ID:", delivery.transporterId);
+            const transporterDoc = await firebase_1.db.collection('transporter').doc(delivery.transporterId).get();
+            // console.log("📄 Document exists?:", transporterDoc.exists);
+            // console.log("📊 Raw Data from DB:", transporterDoc.data());
+            const transporterData = transporterDoc.data();
+            delivery.transporterName = transporterData?.fullname || "Courier";
+        }
         // Allow both the owner and the assigned transporter to view
         if (delivery.userId !== uid && delivery.transporterId !== uid) {
             res.status(403).json({ message: "Forbidden" });
@@ -339,8 +349,10 @@ const acceptDelivery = async (req, res) => {
             });
             return;
         }
+        // FIX: Add status: "accepted" here so it disappears from search results
         await docRef.update({
             transporterId: uid,
+            status: "accepted",
             acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -392,3 +404,41 @@ const updateStatusByTransporter = async (req, res) => {
     }
 };
 exports.updateStatusByTransporter = updateStatusByTransporter;
+/* ── GET /deliveries/transporter/active ── */
+// It filters for jobs assigned to the current driver that are currently in progress.
+const getActiveTransporterJobs = async (req, res) => {
+    const uid = resolveUid(req);
+    try {
+        const snapshot = await firebase_1.db
+            .collection("deliveries")
+            .where("transporterId", "==", uid)
+            .where("status", "in", ["accepted", "picked_up", "in_transit"]) // Logic from action plan
+            .orderBy("updatedAt", "desc")
+            .get();
+        const deliveries = snapshot.docs.map((doc) => normalizeDelivery(doc.id, doc.data()));
+        res.status(200).json({ deliveries });
+    }
+    catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+exports.getActiveTransporterJobs = getActiveTransporterJobs;
+/* ── GET /deliveries/transporter/history ── */
+// Similar to getActiveTransporterJobs but shows all past jobs (accepted, completed, cancelled) for the transporter.
+const getTransporterHistory = async (req, res) => {
+    const uid = resolveUid(req);
+    try {
+        const snapshot = await firebase_1.db
+            .collection("deliveries")
+            .where("transporterId", "==", uid)
+            .where("status", "==", "delivered") // Only fully finished jobs
+            .orderBy("updatedAt", "desc")
+            .get();
+        const deliveries = snapshot.docs.map((doc) => normalizeDelivery(doc.id, doc.data()));
+        res.status(200).json({ deliveries });
+    }
+    catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+exports.getTransporterHistory = getTransporterHistory;

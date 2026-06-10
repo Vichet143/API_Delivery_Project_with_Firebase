@@ -98,13 +98,21 @@ const registerTransporter = async (
 const getUserByUid = async (uid: string) => {
   const db = admin.firestore();
 
-  // Check both users and transporter collections
+  // Check users, transporter, and admin collections
   const userDoc = await db.collection("users").doc(uid).get();
   let userData = userDoc.data();
 
   if (!userData) {
     const transporterDoc = await db.collection("transporter").doc(uid).get();
     userData = transporterDoc.data();
+  }
+
+  if (!userData) {
+    const adminDoc = await db.collection("admin").doc(uid).get();
+    userData = adminDoc.data();
+    if (userData && !userData.roles) {
+      userData.roles = "admin";
+    }
   }
 
   if (userData && !userData.photoURL) {
@@ -130,7 +138,7 @@ export const login = async (phone_number: string, roles?: string) => {
 
   const db = admin.firestore();
 
-  // Check both users and transporter collections
+  // Check users, transporter, and admin collections
   const userDoc = await db.collection("users").doc(userRecord.uid).get();
   let userData = userDoc.data();
 
@@ -140,6 +148,17 @@ export const login = async (phone_number: string, roles?: string) => {
       .doc(userRecord.uid)
       .get();
     userData = transporterDoc.data();
+  }
+
+  if (!userData) {
+    const adminDoc = await db
+      .collection("admin")
+      .doc(userRecord.uid)
+      .get();
+    userData = adminDoc.data();
+    if (userData && !userData.roles) {
+      userData.roles = "admin";
+    }
   }
 
   if (!userData) {
@@ -175,7 +194,7 @@ const getAllUsers = async () => {
 
   const usersWithRoles = await Promise.all(
     listUsersResult.users.map(async (user) => {
-      // Check both users and transporter collections
+      // Check users, transporter, and admin collections
       const userDoc = await db.collection("users").doc(user.uid).get();
       let userData = userDoc.data();
 
@@ -185,6 +204,17 @@ const getAllUsers = async () => {
           .doc(user.uid)
           .get();
         userData = transporterDoc.data();
+      }
+
+      if (!userData) {
+        const adminDoc = await db
+          .collection("admin")
+          .doc(user.uid)
+          .get();
+        userData = adminDoc.data();
+        if (userData && !userData.roles) {
+          userData.roles = "admin";
+        }
       }
 
       return {
@@ -224,13 +254,17 @@ export const updateUser = async (
   let targetCollection = "users";
   if (roles === "transporter") {
     targetCollection = "transporter";
+  } else if (roles === "admin") {
+    targetCollection = "admin";
   } else if (typeof roles === "undefined") {
-    const [usersDoc, transporterDoc] = await Promise.all([
+    const [usersDoc, transporterDoc, adminDoc] = await Promise.all([
       db.collection("users").doc(uid).get(),
       db.collection("transporter").doc(uid).get(),
+      db.collection("admin").doc(uid).get(),
     ]);
     if (usersDoc.exists) targetCollection = "users";
     else if (transporterDoc.exists) targetCollection = "transporter";
+    else if (adminDoc.exists) targetCollection = "admin";
     else targetCollection = "users";
   } else {
     targetCollection = "users";

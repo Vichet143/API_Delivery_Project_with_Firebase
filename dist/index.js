@@ -23,5 +23,5 @@ app.use("/payment", PaymentRoute_1.default);
 app.use("/chat", ChatRoute_1.default);
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-    console.log(`🚀 Server running on port ${port}`);
+    console.log(`Server running on port ${port}`);
 });
