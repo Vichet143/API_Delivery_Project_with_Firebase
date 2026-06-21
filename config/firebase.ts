@@ -7,7 +7,7 @@ dotenv.config();
 const serviceAccount = require(
   path.join(
     __dirname,
-    "../config/projectpracticumyear3-firebase-adminsdk-fbsvc-47ea9a1b7d.json",
+    "project-practicum-app-year-3-firebase-adminsdk-fbsvc-0636a4e5fd.json",
   ),
 );
 
